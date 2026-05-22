@@ -303,24 +303,27 @@ body {
 .custom-legend {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap; /* Keep wrap just in case, but shrink items to fit */
-  gap: 8px 10px; /* Reduced Row and Column gap */
-  padding-bottom: 24px;
+  flex-wrap: nowrap; /* Force exactly one line on desktop */
+  gap: 6px; /* Tight gap */
+  padding-bottom: 20px;
+  width: 100%;
 }
 
 .custom-legend-item {
   display: flex;
   align-items: center;
-  gap: 6px; /* Reduced gap */
-  font-size: 12px; /* Slightly smaller font */
+  gap: 4px; /* Tighter gap between text and icon */
+  font-size: 11px; /* Smaller font to fit perfectly */
   font-weight: 600;
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 12px; /* Reduced padding */
+  padding: 4px 8px; /* Tighter padding */
   border-radius: 50px; /* Pill shape */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 1;
 }
 
 .custom-legend-item:hover {
