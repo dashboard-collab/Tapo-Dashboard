@@ -168,57 +168,78 @@ export default function Dashboard() {
   const latestValues = useMemo(() => {
     const latest = {};
     CONFIG.rooms.forEach(room => {
-      latest[room.id] = { temp: '--', hum: '--', tempTrend: 0, humTrend: 0, isAlert: false, tempAlert: false, humAlert: false };
+      latest[room.id] = { 
+        temp: '--', hum: '--', tempTrend: 0, humTrend: 0, isAlert: false, tempAlert: false, humAlert: false,
+        tempMax: '--', tempMin: '--', tempAvg: '--',
+        humMax: '--', humMin: '--', humAvg: '--'
+      };
       
-      let lastPoint = null;
-      let prevPoint = null;
+      let lastTemp = null, prevTemp = null;
+      let lastHum = null, prevHum = null;
+      
+      let tMax = -Infinity, tMin = Infinity, tSum = 0, tCount = 0;
+      let hMax = -Infinity, hMin = Infinity, hSum = 0, hCount = 0;
       
       for (let i = filteredData.length - 1; i >= 0; i--) {
         const row = filteredData[i];
-        const hasTemp = row[`${room.id}_temp`] != null;
-        const hasHum = row[`${room.id}_hum`] != null;
+        const temp = row[`${room.id}_temp`];
+        const hum = row[`${room.id}_hum`];
         
-        if (hasTemp || hasHum) {
-          if (!lastPoint) {
-            lastPoint = row;
-          } else if (!prevPoint) {
-            prevPoint = row;
-            break; 
-          }
+        if (temp != null) {
+          if (lastTemp === null) lastTemp = temp;
+          else if (prevTemp === null) prevTemp = temp;
+          
+          if (temp > tMax) tMax = temp;
+          if (temp < tMin) tMin = temp;
+          tSum += temp;
+          tCount++;
+        }
+        
+        if (hum != null) {
+          if (lastHum === null) lastHum = hum;
+          else if (prevHum === null) prevHum = hum;
+          
+          if (hum > hMax) hMax = hum;
+          if (hum < hMin) hMin = hum;
+          hSum += hum;
+          hCount++;
         }
       }
       
-      if (lastPoint) {
-        const temp = lastPoint[`${room.id}_temp`];
-        const hum = lastPoint[`${room.id}_hum`];
-        
-        latest[room.id].temp = temp != null ? temp.toFixed(1) : '--';
-        latest[room.id].hum = hum != null ? hum.toFixed(1) : '--';
-        
-        if (prevPoint) {
-          const prevTemp = prevPoint[`${room.id}_temp`];
-          const prevHum = prevPoint[`${room.id}_hum`];
-          
-          if (temp != null && prevTemp != null) {
-            latest[room.id].tempTrend = temp > prevTemp ? 1 : (temp < prevTemp ? -1 : 0);
-          }
-          if (hum != null && prevHum != null) {
-            latest[room.id].humTrend = hum > prevHum ? 1 : (hum < prevHum ? -1 : 0);
-          }
+      if (lastTemp !== null) {
+        latest[room.id].temp = lastTemp.toFixed(1);
+        if (prevTemp !== null) {
+          latest[room.id].tempTrend = lastTemp > prevTemp ? 1 : (lastTemp < prevTemp ? -1 : 0);
         }
-        
-        if (room.tempRange && temp != null) {
-          if (temp < room.tempRange[0] || temp > room.tempRange[1]) {
+        if (room.tempRange) {
+          if (lastTemp < room.tempRange[0] || lastTemp > room.tempRange[1]) {
             latest[room.id].isAlert = true;
             latest[room.id].tempAlert = true;
           }
         }
-        if (room.humRange && hum != null) {
-          if (hum < room.humRange[0] || hum > room.humRange[1]) {
+      }
+      if (tCount > 0) {
+        latest[room.id].tempMax = tMax.toFixed(1);
+        latest[room.id].tempMin = tMin.toFixed(1);
+        latest[room.id].tempAvg = (tSum / tCount).toFixed(1);
+      }
+
+      if (lastHum !== null) {
+        latest[room.id].hum = lastHum.toFixed(1);
+        if (prevHum !== null) {
+          latest[room.id].humTrend = lastHum > prevHum ? 1 : (lastHum < prevHum ? -1 : 0);
+        }
+        if (room.humRange) {
+          if (lastHum < room.humRange[0] || lastHum > room.humRange[1]) {
             latest[room.id].isAlert = true;
             latest[room.id].humAlert = true;
           }
         }
+      }
+      if (hCount > 0) {
+        latest[room.id].humMax = hMax.toFixed(1);
+        latest[room.id].humMin = hMin.toFixed(1);
+        latest[room.id].humAvg = (hSum / hCount).toFixed(1);
       }
     });
     return latest;
@@ -359,12 +380,22 @@ export default function Dashboard() {
                     <span className={`stat-val ${stats.tempAlert ? 'text-glow-danger' : ''}`}>
                       {stats.temp}°C {renderTrend(stats.tempTrend)}
                     </span>
+                    <div className="stat-mini-stats">
+                      <span>H: {stats.tempMax}°</span>
+                      <span>L: {stats.tempMin}°</span>
+                      <span className="stat-avg">Avg: {stats.tempAvg}°</span>
+                    </div>
                   </div>
                   <div>
                     <span className="stat-label">ความชื้นล่าสุด:</span>
                     <span className={`stat-val ${stats.humAlert ? 'text-glow-danger' : ''}`}>
                       {stats.hum}% {renderTrend(stats.humTrend)}
                     </span>
+                    <div className="stat-mini-stats">
+                      <span>H: {stats.humMax}%</span>
+                      <span>L: {stats.humMin}%</span>
+                      <span className="stat-avg">Avg: {stats.humAvg}%</span>
+                    </div>
                   </div>
                 </div>
               </div>
