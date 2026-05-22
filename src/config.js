@@ -17,9 +17,9 @@ export const CONFIG = {
     },
     {
       id: "coldkit_fridge2",
-      sheetName: "ColdKit Fridge 2",
+      sheetName: "Live Tapo",
       color: "#4ade80", // Green
-      icon: "🧊"
+      icon: "📡"
     },
     {
       id: "meddevice_room",
