@@ -1,0 +1,443 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+
+/* Global Reset for better Mobile Layout */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #0f172a;
+  --bg-panel: rgba(30, 41, 59, 0.7);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --accent-blue: #38bdf8;
+  --accent-green: #4ade80;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(74, 222, 128, 0.15) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text-main);
+  min-height: 100vh;
+}
+
+.glass-panel {
+  background: var(--bg-panel);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  justify-content: center;
+}
+
+.main-content {
+  width: 100%;
+  max-width: 1600px;
+  padding: 32px;
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+}
+
+/* Dashboard Content Flex for Ordering */
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header {
+  order: 1;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.dashboard-header h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0;
+  background: -webkit-linear-gradient(45deg, #f8fafc, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dashboard-header p {
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-size: 1.1rem;
+}
+
+/* Control Panel */
+.control-panel {
+  order: 2;
+  padding: 24px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-group label {
+  color: var(--text-muted);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.modern-select {
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 200px;
+  /* Prevent iOS zoom */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.modern-select:hover {
+  border-color: rgba(255,255,255,0.3);
+}
+
+.date-picker-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modern-input {
+  background: rgba(15, 23, 42, 0.8);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 1rem;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  color-scheme: dark; /* Makes the calendar popup dark mode */
+}
+
+.modern-input:hover {
+  border-color: rgba(255,255,255,0.3);
+}
+
+.room-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.room-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  user-select: none;
+  font-weight: 600;
+}
+
+.room-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.room-toggle.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--room-color);
+  color: var(--text-main);
+  box-shadow: 0 0 10px rgba(255,255,255,0.05) inset;
+}
+
+/* Averages Section */
+.averages-container {
+  order: 3;
+  margin-bottom: 32px;
+}
+
+.averages-container h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 4px; height: 100%;
+  background: var(--card-color);
+}
+
+.stat-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-values-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  background: rgba(0,0,0,0.2);
+  padding: 12px;
+  border-radius: 8px;
+}
+
+.stat-values-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.stat-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+/* Charts Grid Side by Side */
+.charts-grid-side-by-side {
+  order: 4;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 1100px) {
+  .charts-grid-side-by-side {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-container {
+  padding: 24px;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-container h3 {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: var(--accent-blue);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+/* Recharts Customizations */
+.recharts-legend-item-text {
+  color: var(--text-main) !important;
+}
+
+/* =========================================================
+   MOBILE RESPONSIVENESS (Media Queries)
+   ========================================================= */
+
+/* Tablets and small laptops */
+@media (max-width: 900px) {
+  .control-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .control-group {
+    width: 100%;
+  }
+  
+  .modern-select {
+    width: 100%;
+  }
+}
+
+/* Mobile Phones */
+@media (max-width: 600px) {
+  .main-content {
+    padding: 16px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 1.8rem;
+  }
+
+  .dashboard-header p {
+    font-size: 0.95rem;
+  }
+
+  .control-panel {
+    padding: 16px;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+
+  .date-picker-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  
+  .date-picker-group span {
+    text-align: center;
+  }
+
+  .modern-input {
+    width: 100%;
+  }
+
+  /* Make room toggles wrap into 2 columns on mobile */
+  .room-toggles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .room-toggle {
+    padding: 8px;
+    font-size: 0.85rem;
+    justify-content: flex-start;
+  }
+
+  /* Reduce Chart height for mobile */
+  .chart-container {
+    padding: 16px;
+    height: 400px;
+  }
+
+  .chart-container h3 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+  }
+  
+  /* =========================================================
+     REORDER FOR MOBILE: Put Averages at the bottom
+     ========================================================= */
+  .charts-grid-side-by-side {
+    order: 3;
+    gap: 24px;
+  }
+
+  .averages-container {
+    order: 4;
+    margin-top: 32px;
+    margin-bottom: 0;
+  }
+
+  .averages-container h3 {
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  /* Compact 2x2 Grid for Averages Cards */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-title {
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stat-values-row {
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    margin-top: 12px;
+  }
+
+  .stat-values-row > div {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+  }
+
+  .stat-val {
+    font-size: 1.1rem;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+  .room-toggles {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr; /* Stack average cards on very tiny screens */
+  }
+}
