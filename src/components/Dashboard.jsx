@@ -1,10 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Papa from 'papaparse';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import { Thermometer, Droplets, Clock, CheckSquare, Square } from 'lucide-react';
 import { CONFIG } from '../config';
+
+// 100% Custom React Legend (Rendered outside Recharts completely to avoid SVG disappearing bugs)
+const CustomLegend = ({ payload }) => {
+  if (!payload || payload.length === 0) return null;
+  
+  return (
+    <div className="custom-legend">
+      {payload.map((entry, index) => (
+        <div key={`item-${index}`} className="custom-legend-item">
+          <span>{entry.value}</span>
+          <svg width="26" height="12" viewBox="0 0 32 14">
+            <path strokeWidth="3" fill="none" stroke={entry.color} d="M0,7 h12 m8,0 h12" />
+            <circle cx="16" cy="7" r="4" fill="var(--bg-dark)" stroke={entry.color} strokeWidth="3" />
+          </svg>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
@@ -12,7 +31,7 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   
   // Controls state
-  const [timeFilter, setTimeFilter] = useState('all'); // '1h', '3h', '6h', '24h', 'all', 'custom'
+  const [timeFilter, setTimeFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   
@@ -45,7 +64,6 @@ export default function Dashboard() {
                   const values = Object.values(row);
                   let rawTime = values[0] || '';
                   
-                  // Keep full timestamp for sorting/filtering
                   let timestamp = new Date(rawTime).getTime();
                   if (isNaN(timestamp)) timestamp = 0;
 
@@ -73,7 +91,6 @@ export default function Dashboard() {
 
         const allRoomsData = await Promise.all(fetchPromises);
         
-        // Merge data by time
         const mergedDataMap = {};
         
         allRoomsData.forEach(roomDataArray => {
@@ -86,7 +103,6 @@ export default function Dashboard() {
           });
         });
 
-        // Convert map to sorted array
         const finalData = Object.values(mergedDataMap).sort((a, b) => a.timestamp - b.timestamp);
         
         setData(finalData);
@@ -103,20 +119,17 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Filtered Data based on time selection
   const filteredData = useMemo(() => {
     if (data.length === 0) return data;
     
     if (timeFilter === 'custom') {
       let filtered = data;
       if (startDate) {
-        // Start of the selected day
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         filtered = filtered.filter(item => item.timestamp >= start.getTime());
       }
       if (endDate) {
-        // End of the selected day
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         filtered = filtered.filter(item => item.timestamp <= end.getTime());
@@ -137,7 +150,6 @@ export default function Dashboard() {
     return data.filter(item => item.timestamp >= minTimestamp);
   }, [data, timeFilter, startDate, endDate]);
 
-  // Calculate Averages
   const averages = useMemo(() => {
     const avgs = {};
     CONFIG.rooms.forEach(room => {
@@ -162,6 +174,17 @@ export default function Dashboard() {
     });
     return avgs;
   }, [filteredData]);
+
+  // Payload for Custom Legend
+  const legendPayload = useMemo(() => {
+    return CONFIG.rooms
+      .filter(room => visibleRooms[room.id])
+      .map(room => ({
+        id: room.id,
+        value: `${room.icon} ${room.sheetName}`,
+        color: room.color
+      }));
+  }, [visibleRooms]);
 
   if (loading && data.length === 0) {
     return <div className="loading">Loading dashboard data from Google Sheets...</div>;
@@ -261,83 +284,93 @@ export default function Dashboard() {
 
       {/* Charts Section - Side by Side */}
       <div className="charts-grid-side-by-side">
+        
         {/* Temperature Chart */}
         <div className="glass-panel chart-container">
           <h3><Thermometer size={24} color="#ef4444" style={{marginRight: 8}} /> กราฟอุณหภูมิ (°C)</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-              {/* tickFormatter is used to extract only the HH:mm portion, removing the long date clutter */}
-              <XAxis 
-                dataKey="rawDate" 
-                stroke="var(--text-muted)" 
-                tick={{fill: 'var(--text-muted)', fontSize: 12}} 
-                tickFormatter={(val) => {
-                  if (val.includes(' ')) return val.split(' ')[1];
-                  return val;
-                }}
-              />
-              <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                itemStyle={{ color: 'var(--text-main)' }}
-                labelFormatter={(label) => `วันที่-เวลา: ${label}`}
-              />
-              {/* Removed the <Legend /> component to save space on mobile */}
-              {CONFIG.rooms.map(room => visibleRooms[room.id] && (
-                <Line 
-                  key={`${room.id}_temp`}
-                  type="monotone" 
-                  dataKey={`${room.id}_temp`} 
-                  name={`${room.icon} ${room.sheetName}`} 
-                  stroke={room.color} 
-                  strokeWidth={2} /* Reduced thickness from 3 to 2 */
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  connectNulls
+          
+          <CustomLegend payload={legendPayload} />
+          
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis 
+                  dataKey="rawDate" 
+                  stroke="var(--text-muted)" 
+                  tick={{fill: 'var(--text-muted)', fontSize: 12}} 
+                  tickFormatter={(val) => {
+                    if (val.includes(' ')) return val.split(' ')[1];
+                    return val;
+                  }}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--text-main)' }}
+                  labelFormatter={(label) => `วันที่-เวลา: ${label}`}
+                />
+                {CONFIG.rooms.map(room => visibleRooms[room.id] && (
+                  <Line 
+                    key={`${room.id}_temp`}
+                    type="monotone" 
+                    dataKey={`${room.id}_temp`} 
+                    name={`${room.icon} ${room.sheetName}`} 
+                    stroke={room.color} 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Humidity Chart */}
         <div className="glass-panel chart-container">
           <h3><Droplets size={24} color="#38bdf8" style={{marginRight: 8}} /> กราฟความชื้น (%)</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-              <XAxis 
-                dataKey="rawDate" 
-                stroke="var(--text-muted)" 
-                tick={{fill: 'var(--text-muted)', fontSize: 12}} 
-                tickFormatter={(val) => {
-                  if (val.includes(' ')) return val.split(' ')[1];
-                  return val;
-                }}
-              />
-              <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                itemStyle={{ color: 'var(--text-main)' }}
-                labelFormatter={(label) => `วันที่-เวลา: ${label}`}
-              />
-              {CONFIG.rooms.map(room => visibleRooms[room.id] && (
-                <Line 
-                  key={`${room.id}_hum`}
-                  type="monotone" 
-                  dataKey={`${room.id}_hum`} 
-                  name={`${room.icon} ${room.sheetName}`} 
-                  stroke={room.color} 
-                  strokeWidth={2} /* Reduced thickness */
-                  dot={false}
-                  activeDot={{ r: 5 }}
-                  connectNulls
+          
+          <CustomLegend payload={legendPayload} />
+          
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis 
+                  dataKey="rawDate" 
+                  stroke="var(--text-muted)" 
+                  tick={{fill: 'var(--text-muted)', fontSize: 12}} 
+                  tickFormatter={(val) => {
+                    if (val.includes(' ')) return val.split(' ')[1];
+                    return val;
+                  }}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--text-main)' }}
+                  labelFormatter={(label) => `วันที่-เวลา: ${label}`}
+                />
+                {CONFIG.rooms.map(room => visibleRooms[room.id] && (
+                  <Line 
+                    key={`${room.id}_hum`}
+                    type="monotone" 
+                    dataKey={`${room.id}_hum`} 
+                    name={`${room.icon} ${room.sheetName}`} 
+                    stroke={room.color} 
+                    strokeWidth={2} 
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
+        
       </div>
     </div>
   );

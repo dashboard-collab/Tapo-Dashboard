@@ -158,22 +158,27 @@ body {
   padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--border);
   transition: all 0.2s;
   user-select: none;
   font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .room-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .room-toggle.active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--room-color);
-  color: var(--text-main);
-  box-shadow: 0 0 10px rgba(255,255,255,0.05) inset;
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--room-color);
+  color: var(--room-color);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05) inset;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 /* Averages Section */
@@ -294,6 +299,41 @@ body {
   color: var(--text-main) !important;
 }
 
+/* Custom Legend Styles */
+.custom-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px 16px; /* Row and Column gap */
+  padding-bottom: 24px;
+}
+
+.custom-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 50px; /* Pill shape */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+}
+
+.custom-legend-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.custom-legend-item span {
+  white-space: nowrap; /* Prevent text from wrapping inside the pill */
+}
+
+
+
 /* =========================================================
    MOBILE RESPONSIVENESS (Media Queries)
    ========================================================= */
@@ -364,12 +404,27 @@ body {
   /* Reduce Chart height for mobile */
   .chart-container {
     padding: 16px;
-    height: 400px;
+    height: 420px; /* Slightly taller for mobile to accommodate legend */
   }
 
   .chart-container h3 {
     font-size: 1.1rem;
     margin-bottom: 16px;
+  }
+  
+  /* Mobile Custom Legend */
+  .custom-legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Force exactly 2 columns (2 rows) */
+    gap: 8px;
+    padding-bottom: 16px;
+  }
+  .custom-legend-item {
+    font-size: 11px; /* Shrink slightly to guarantee it fits */
+    padding: 6px 6px;
+    gap: 4px; /* Less space between text and icon */
+    justify-content: center; /* Center content inside the pill */
+    width: 100%;
   }
   
   /* =========================================================
