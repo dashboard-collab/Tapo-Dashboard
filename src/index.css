@@ -303,21 +303,21 @@ body {
 .custom-legend {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px 16px; /* Row and Column gap */
+  flex-wrap: wrap; /* Keep wrap just in case, but shrink items to fit */
+  gap: 8px 10px; /* Reduced Row and Column gap */
   padding-bottom: 24px;
 }
 
 .custom-legend-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px; /* Reduced gap */
+  font-size: 12px; /* Slightly smaller font */
   font-weight: 600;
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 14px;
+  padding: 6px 12px; /* Reduced padding */
   border-radius: 50px; /* Pill shape */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transition: all 0.2s;
