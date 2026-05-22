@@ -7,17 +7,28 @@ import { Thermometer, Droplets, Clock, CheckSquare, Square } from 'lucide-react'
 import { CONFIG } from '../config';
 
 // 100% Custom React Legend (Rendered outside Recharts completely to avoid SVG disappearing bugs)
-const CustomLegend = ({ payload }) => {
+const CustomLegend = ({ payload, onHover }) => {
   if (!payload || payload.length === 0) return null;
   
   return (
     <div className="custom-legend">
       {payload.map((entry, index) => (
-        <div key={`item-${index}`} className="custom-legend-item">
+        <div 
+          key={`item-${index}`} 
+          className="custom-legend-item"
+          onMouseEnter={() => onHover && onHover(entry.id)}
+          onMouseLeave={() => onHover && onHover(null)}
+          style={{ 
+            boxShadow: entry.isHovered ? `0 0 12px ${entry.color}` : '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderColor: entry.isHovered ? entry.color : 'rgba(255, 255, 255, 0.1)',
+            cursor: 'pointer',
+            transform: entry.isHovered ? 'translateY(-2px)' : 'none'
+          }}
+        >
           <span>{entry.value}</span>
           <svg width="26" height="12" viewBox="0 0 32 14">
-            <path strokeWidth="3" fill="none" stroke={entry.color} d="M0,7 h12 m8,0 h12" />
-            <circle cx="16" cy="7" r="4" fill="var(--bg-dark)" stroke={entry.color} strokeWidth="3" />
+            <path strokeWidth={entry.isHovered ? "4" : "3"} fill="none" stroke={entry.color} d="M0,7 h12 m8,0 h12" />
+            <circle cx="16" cy="7" r={entry.isHovered ? "5" : "4"} fill="var(--bg-dark)" stroke={entry.color} strokeWidth="3" />
           </svg>
         </div>
       ))}
@@ -31,9 +42,10 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   
   // Controls state
-  const [timeFilter, setTimeFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('1h');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [hoveredRoom, setHoveredRoom] = useState(null);
   
   const [visibleRooms, setVisibleRooms] = useState(
     CONFIG.rooms.reduce((acc, room) => ({...acc, [room.id]: true}), {})
@@ -182,9 +194,10 @@ export default function Dashboard() {
       .map(room => ({
         id: room.id,
         value: `${room.icon} ${room.sheetName}`,
-        color: room.color
+        color: room.color,
+        isHovered: hoveredRoom === room.id
       }));
-  }, [visibleRooms]);
+  }, [visibleRooms, hoveredRoom]);
 
   if (loading && data.length === 0) {
     return <div className="loading">Loading dashboard data from Google Sheets...</div>;
@@ -289,18 +302,18 @@ export default function Dashboard() {
         <div className="glass-panel chart-container">
           <h3><Thermometer size={24} color="#ef4444" style={{marginRight: 8}} /> กราฟอุณหภูมิ (°C)</h3>
           
-          <CustomLegend payload={legendPayload} />
+          <CustomLegend payload={legendPayload} onHover={setHoveredRoom} />
           
           <div style={{ flex: 1, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} onMouseLeave={() => setHoveredRoom(null)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                 <XAxis 
                   dataKey="rawDate" 
                   stroke="var(--text-muted)" 
                   tick={{fill: 'var(--text-muted)', fontSize: 12}} 
                   tickFormatter={(val) => {
-                    if (val.includes(' ')) return val.split(' ')[1];
+                    if (val && val.includes(' ')) return val.split(' ')[1];
                     return val;
                   }}
                 />
@@ -310,19 +323,32 @@ export default function Dashboard() {
                   itemStyle={{ color: 'var(--text-main)' }}
                   labelFormatter={(label) => `วันที่-เวลา: ${label}`}
                 />
-                {CONFIG.rooms.map(room => visibleRooms[room.id] && (
-                  <Line 
-                    key={`${room.id}_temp`}
-                    type="monotone" 
-                    dataKey={`${room.id}_temp`} 
-                    name={`${room.icon} ${room.sheetName}`} 
-                    stroke={room.color} 
-                    strokeWidth={2} 
-                    dot={false}
-                    activeDot={{ r: 5 }}
-                    connectNulls
-                  />
-                ))}
+                {CONFIG.rooms.map(room => {
+                  if (!visibleRooms[room.id]) return null;
+                  const isHovered = hoveredRoom === room.id;
+                  const isOthersHovered = hoveredRoom !== null && hoveredRoom !== room.id;
+                  
+                  return (
+                    <Line 
+                      key={`${room.id}_temp`}
+                      type="monotone" 
+                      dataKey={`${room.id}_temp`} 
+                      name={`${room.icon} ${room.sheetName}`} 
+                      stroke={room.color} 
+                      strokeWidth={isHovered ? 4 : 2} 
+                      strokeOpacity={isOthersHovered ? 0.15 : 1}
+                      style={{
+                        filter: isHovered ? `drop-shadow(0px 0px 8px ${room.color})` : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                      dot={false}
+                      activeDot={{ r: isHovered ? 8 : 5 }}
+                      connectNulls
+                      onMouseEnter={() => setHoveredRoom(room.id)}
+                      onMouseLeave={() => setHoveredRoom(null)}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -332,18 +358,18 @@ export default function Dashboard() {
         <div className="glass-panel chart-container">
           <h3><Droplets size={24} color="#38bdf8" style={{marginRight: 8}} /> กราฟความชื้น (%)</h3>
           
-          <CustomLegend payload={legendPayload} />
+          <CustomLegend payload={legendPayload} onHover={setHoveredRoom} />
           
           <div style={{ flex: 1, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <LineChart data={filteredData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} onMouseLeave={() => setHoveredRoom(null)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                 <XAxis 
                   dataKey="rawDate" 
                   stroke="var(--text-muted)" 
                   tick={{fill: 'var(--text-muted)', fontSize: 12}} 
                   tickFormatter={(val) => {
-                    if (val.includes(' ')) return val.split(' ')[1];
+                    if (val && val.includes(' ')) return val.split(' ')[1];
                     return val;
                   }}
                 />
@@ -353,19 +379,32 @@ export default function Dashboard() {
                   itemStyle={{ color: 'var(--text-main)' }}
                   labelFormatter={(label) => `วันที่-เวลา: ${label}`}
                 />
-                {CONFIG.rooms.map(room => visibleRooms[room.id] && (
-                  <Line 
-                    key={`${room.id}_hum`}
-                    type="monotone" 
-                    dataKey={`${room.id}_hum`} 
-                    name={`${room.icon} ${room.sheetName}`} 
-                    stroke={room.color} 
-                    strokeWidth={2} 
-                    dot={false}
-                    activeDot={{ r: 5 }}
-                    connectNulls
-                  />
-                ))}
+                {CONFIG.rooms.map(room => {
+                  if (!visibleRooms[room.id]) return null;
+                  const isHovered = hoveredRoom === room.id;
+                  const isOthersHovered = hoveredRoom !== null && hoveredRoom !== room.id;
+                  
+                  return (
+                    <Line 
+                      key={`${room.id}_hum`}
+                      type="monotone" 
+                      dataKey={`${room.id}_hum`} 
+                      name={`${room.icon} ${room.sheetName}`} 
+                      stroke={room.color} 
+                      strokeWidth={isHovered ? 4 : 2} 
+                      strokeOpacity={isOthersHovered ? 0.15 : 1}
+                      style={{
+                        filter: isHovered ? `drop-shadow(0px 0px 8px ${room.color})` : 'none',
+                        transition: 'all 0.3s ease'
+                      }}
+                      dot={false}
+                      activeDot={{ r: isHovered ? 8 : 5 }}
+                      connectNulls
+                      onMouseEnter={() => setHoveredRoom(room.id)}
+                      onMouseLeave={() => setHoveredRoom(null)}
+                    />
+                  );
+                })}
               </LineChart>
             </ResponsiveContainer>
           </div>
