@@ -181,6 +181,18 @@ body {
   text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
+@keyframes pulse-danger {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.text-glow-danger {
+  color: #ef4444 !important;
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4);
+  font-weight: bold;
+}
+
 /* Averages Section */
 .averages-container {
   order: 3;
@@ -301,10 +313,10 @@ body {
 
 /* Custom Legend Styles */
 .custom-legend {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content max-content;
   justify-content: center;
-  flex-wrap: nowrap; /* Force exactly one line on desktop */
-  gap: 6px; /* Tight gap */
+  gap: 8px 16px;
   padding-bottom: 20px;
   width: 100%;
 }
@@ -331,8 +343,19 @@ body {
   transform: translateY(-1px);
 }
 
-.custom-legend-item span {
-  white-space: nowrap; /* Prevent text from wrapping inside the pill */
+.legend-text-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-name {
+  white-space: nowrap;
+}
+
+.legend-axis {
+  white-space: nowrap;
 }
 
 
@@ -423,11 +446,26 @@ body {
     padding-bottom: 16px;
   }
   .custom-legend-item {
-    font-size: 11px; /* Shrink slightly to guarantee it fits */
-    padding: 6px 6px;
-    gap: 4px; /* Less space between text and icon */
-    justify-content: center; /* Center content inside the pill */
+    font-size: 10px;
+    padding: 6px 10px;
+    gap: 4px; 
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
+    height: auto;
+    min-height: 42px;
+  }
+  
+  .legend-text-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  
+  .legend-axis {
+    font-size: 0.9em;
+    opacity: 0.8;
   }
   
   /* =========================================================

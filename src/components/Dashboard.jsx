@@ -25,8 +25,11 @@ const CustomLegend = ({ payload, onHover }) => {
             transform: entry.isHovered ? 'translateY(-2px)' : 'none'
           }}
         >
-          <span>{entry.value}</span>
-          <svg width="26" height="12" viewBox="0 0 32 14">
+          <div className="legend-text-container">
+            <span className="legend-name">{entry.icon} {entry.name}</span>
+            <span className="legend-axis">{entry.axis}</span>
+          </div>
+          <svg width="26" height="12" viewBox="0 0 32 14" style={{ flexShrink: 0 }}>
             <path strokeWidth={entry.isHovered ? "4" : "3"} fill="none" stroke={entry.color} d="M0,7 h12 m8,0 h12" />
             <circle cx="16" cy="7" r={entry.isHovered ? "5" : "4"} fill="var(--bg-dark)" stroke={entry.color} strokeWidth="3" />
           </svg>
@@ -162,41 +165,80 @@ export default function Dashboard() {
     return data.filter(item => item.timestamp >= minTimestamp);
   }, [data, timeFilter, startDate, endDate]);
 
-  const averages = useMemo(() => {
-    const avgs = {};
+  const latestValues = useMemo(() => {
+    const latest = {};
     CONFIG.rooms.forEach(room => {
-      let tempSum = 0, humSum = 0;
-      let tempCount = 0, humCount = 0;
+      latest[room.id] = { temp: '--', hum: '--', tempTrend: 0, humTrend: 0, isAlert: false, tempAlert: false, humAlert: false };
       
-      filteredData.forEach(row => {
-        if (row[`${room.id}_temp`] != null) {
-          tempSum += row[`${room.id}_temp`];
-          tempCount++;
-        }
-        if (row[`${room.id}_hum`] != null) {
-          humSum += row[`${room.id}_hum`];
-          humCount++;
-        }
-      });
+      let lastPoint = null;
+      let prevPoint = null;
       
-      avgs[room.id] = {
-        temp: tempCount > 0 ? (tempSum / tempCount).toFixed(1) : '--',
-        hum: humCount > 0 ? (humSum / humCount).toFixed(1) : '--'
-      };
+      for (let i = filteredData.length - 1; i >= 0; i--) {
+        const row = filteredData[i];
+        const hasTemp = row[`${room.id}_temp`] != null;
+        const hasHum = row[`${room.id}_hum`] != null;
+        
+        if (hasTemp || hasHum) {
+          if (!lastPoint) {
+            lastPoint = row;
+          } else if (!prevPoint) {
+            prevPoint = row;
+            break; 
+          }
+        }
+      }
+      
+      if (lastPoint) {
+        const temp = lastPoint[`${room.id}_temp`];
+        const hum = lastPoint[`${room.id}_hum`];
+        
+        latest[room.id].temp = temp != null ? temp.toFixed(1) : '--';
+        latest[room.id].hum = hum != null ? hum.toFixed(1) : '--';
+        
+        if (prevPoint) {
+          const prevTemp = prevPoint[`${room.id}_temp`];
+          const prevHum = prevPoint[`${room.id}_hum`];
+          
+          if (temp != null && prevTemp != null) {
+            latest[room.id].tempTrend = temp > prevTemp ? 1 : (temp < prevTemp ? -1 : 0);
+          }
+          if (hum != null && prevHum != null) {
+            latest[room.id].humTrend = hum > prevHum ? 1 : (hum < prevHum ? -1 : 0);
+          }
+        }
+        
+        if (room.tempRange && temp != null) {
+          if (temp < room.tempRange[0] || temp > room.tempRange[1]) {
+            latest[room.id].isAlert = true;
+            latest[room.id].tempAlert = true;
+          }
+        }
+        if (room.humRange && hum != null) {
+          if (hum < room.humRange[0] || hum > room.humRange[1]) {
+            latest[room.id].isAlert = true;
+            latest[room.id].humAlert = true;
+          }
+        }
+      }
     });
-    return avgs;
+    return latest;
   }, [filteredData]);
 
   // Payload for Custom Legend
   const legendPayload = useMemo(() => {
     return CONFIG.rooms
       .filter(room => visibleRooms[room.id])
-      .map(room => ({
-        id: room.id,
-        value: `${room.icon} ${room.sheetName}`,
-        color: room.color,
-        isHovered: hoveredRoom === room.id
-      }));
+      .map(room => {
+        const axisText = room.id.includes('fridge') ? '(แกนขวา)' : '(แกนซ้าย)';
+        return {
+          id: room.id,
+          icon: room.icon,
+          name: room.sheetName,
+          axis: axisText,
+          color: room.color,
+          isHovered: hoveredRoom === room.id
+        };
+      });
   }, [visibleRooms, hoveredRoom]);
 
   if (loading && data.length === 0) {
@@ -205,6 +247,28 @@ export default function Dashboard() {
 
   if (error) {
     return <div className="loading" style={{color: '#ef4444'}}>Error: {error}</div>;
+  }
+
+  let leftAxisColor = "var(--text-muted)";
+  let rightAxisColor = "var(--text-muted)";
+  let leftAxisFilter = "none";
+  let rightAxisFilter = "none";
+  let leftAxisWeight = "normal";
+  let rightAxisWeight = "normal";
+
+  if (hoveredRoom) {
+    const hoveredRoomConfig = CONFIG.rooms.find(r => r.id === hoveredRoom);
+    if (hoveredRoomConfig) {
+      if (hoveredRoom.includes('fridge')) {
+        rightAxisColor = hoveredRoomConfig.color;
+        rightAxisFilter = `drop-shadow(0px 0px 8px ${hoveredRoomConfig.color})`;
+        rightAxisWeight = "bold";
+      } else {
+        leftAxisColor = hoveredRoomConfig.color;
+        leftAxisFilter = `drop-shadow(0px 0px 8px ${hoveredRoomConfig.color})`;
+        leftAxisWeight = "bold";
+      }
+    }
   }
 
   return (
@@ -268,25 +332,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Averages Section */}
+      {/* Latest Values Section */}
       <div className="averages-container">
-        <h3>📊 ค่าเฉลี่ยตามช่วงเวลาที่เลือก (Averages)</h3>
+        <h3>📊 ค่าปัจจุบันล่าสุด (Current Status)</h3>
         <div className="stats-grid">
           {CONFIG.rooms.map(room => {
             if (!visibleRooms[room.id]) return null;
+            const stats = latestValues[room.id];
+            const alertClass = stats.isAlert ? 'alert-danger' : '';
+            
+            const renderTrend = (trendVal) => {
+              if (trendVal === 1) return <span className="trend-indicator trend-up">▲</span>;
+              if (trendVal === -1) return <span className="trend-indicator trend-down">▼</span>;
+              return <span className="trend-indicator trend-stable">−</span>;
+            };
+
             return (
-              <div key={`avg-${room.id}`} className="glass-panel stat-card" style={{ '--card-color': room.color }}>
+              <div key={`latest-${room.id}`} className={`glass-panel stat-card ${alertClass}`} style={{ '--card-color': room.color }}>
                 <div className="stat-title" style={{color: room.color}}>
                   {room.icon} {room.sheetName}
+                  {stats.isAlert && <span style={{marginLeft: '8px', color: '#ef4444'}}>⚠️ ผิดปกติ</span>}
                 </div>
                 <div className="stat-values-row">
                   <div>
-                    <span className="stat-label">อุณหภูมิ:</span>
-                    <span className="stat-val">{averages[room.id].temp}°C</span>
+                    <span className="stat-label">อุณหภูมิล่าสุด:</span>
+                    <span className={`stat-val ${stats.tempAlert ? 'text-glow-danger' : ''}`}>
+                      {stats.temp}°C {renderTrend(stats.tempTrend)}
+                    </span>
                   </div>
                   <div>
-                    <span className="stat-label">ความชื้น:</span>
-                    <span className="stat-val">{averages[room.id].hum}%</span>
+                    <span className="stat-label">ความชื้นล่าสุด:</span>
+                    <span className={`stat-val ${stats.humAlert ? 'text-glow-danger' : ''}`}>
+                      {stats.hum}% {renderTrend(stats.humTrend)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -311,38 +389,53 @@ export default function Dashboard() {
                 <XAxis 
                   dataKey="rawDate" 
                   stroke="var(--text-muted)" 
-                  tick={{fill: 'var(--text-muted)', fontSize: 12}} 
+                  tick={{fill: 'var(--text-muted)', fontSize: 10}} 
+                  minTickGap={15}
                   tickFormatter={(val) => {
                     if (val && val.includes(' ')) return val.split(' ')[1];
                     return val;
                   }}
                 />
-                <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
+                <YAxis yAxisId="left" stroke={leftAxisColor} tick={{fill: leftAxisColor, fontWeight: leftAxisWeight}} domain={['auto', 'auto']} style={{ filter: leftAxisFilter, transition: 'all 0.3s ease' }} />
+                <YAxis yAxisId="right" orientation="right" stroke={rightAxisColor} tick={{fill: rightAxisColor, fontWeight: rightAxisWeight}} domain={['auto', 'auto']} style={{ filter: rightAxisFilter, transition: 'all 0.3s ease' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                  itemStyle={{ color: 'var(--text-main)' }}
-                  labelFormatter={(label) => `วันที่-เวลา: ${label}`}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)', 
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderColor: 'rgba(255, 255, 255, 0.15)', 
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                  }}
+                  itemStyle={{ color: 'var(--text-main)', padding: '2px 0' }}
+                  labelStyle={{ fontWeight: 'bold', marginBottom: '4px', color: 'var(--text-muted)', fontSize: '11px' }}
+                  labelFormatter={(label) => `เวลา: ${label}`}
                 />
                 {CONFIG.rooms.map(room => {
                   if (!visibleRooms[room.id]) return null;
                   const isHovered = hoveredRoom === room.id;
                   const isOthersHovered = hoveredRoom !== null && hoveredRoom !== room.id;
                   
+                  const yAxisId = room.id.includes('fridge') ? 'right' : 'left';
+                  
                   return (
                     <Line 
+                      yAxisId={yAxisId}
                       key={`${room.id}_temp`}
                       type="monotone" 
                       dataKey={`${room.id}_temp`} 
                       name={`${room.icon} ${room.sheetName}`} 
                       stroke={room.color} 
-                      strokeWidth={isHovered ? 4 : 2} 
+                      strokeWidth={isHovered ? 2.5 : 1.5} 
                       strokeOpacity={isOthersHovered ? 0.15 : 1}
                       style={{
-                        filter: isHovered ? `drop-shadow(0px 0px 8px ${room.color})` : 'none',
+                        filter: isHovered ? `drop-shadow(0px 0px 4px ${room.color})` : 'none',
                         transition: 'all 0.3s ease'
                       }}
                       dot={false}
-                      activeDot={{ r: isHovered ? 8 : 5 }}
+                      activeDot={{ r: isHovered ? 6 : 4 }}
                       connectNulls
                       onMouseEnter={() => setHoveredRoom(room.id)}
                       onMouseLeave={() => setHoveredRoom(null)}
@@ -367,38 +460,53 @@ export default function Dashboard() {
                 <XAxis 
                   dataKey="rawDate" 
                   stroke="var(--text-muted)" 
-                  tick={{fill: 'var(--text-muted)', fontSize: 12}} 
+                  tick={{fill: 'var(--text-muted)', fontSize: 10}} 
+                  minTickGap={15}
                   tickFormatter={(val) => {
                     if (val && val.includes(' ')) return val.split(' ')[1];
                     return val;
                   }}
                 />
-                <YAxis stroke="var(--text-muted)" tick={{fill: 'var(--text-muted)'}} domain={['auto', 'auto']} />
+                <YAxis yAxisId="left" stroke={leftAxisColor} tick={{fill: leftAxisColor, fontWeight: leftAxisWeight}} domain={['auto', 'auto']} style={{ filter: leftAxisFilter, transition: 'all 0.3s ease' }} />
+                <YAxis yAxisId="right" orientation="right" stroke={rightAxisColor} tick={{fill: rightAxisColor, fontWeight: rightAxisWeight}} domain={['auto', 'auto']} style={{ filter: rightAxisFilter, transition: 'all 0.3s ease' }} />
                 <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--bg-dark)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                  itemStyle={{ color: 'var(--text-main)' }}
-                  labelFormatter={(label) => `วันที่-เวลา: ${label}`}
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(15, 23, 42, 0.65)', 
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderColor: 'rgba(255, 255, 255, 0.15)', 
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '11px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                  }}
+                  itemStyle={{ color: 'var(--text-main)', padding: '2px 0' }}
+                  labelStyle={{ fontWeight: 'bold', marginBottom: '4px', color: 'var(--text-muted)', fontSize: '11px' }}
+                  labelFormatter={(label) => `เวลา: ${label}`}
                 />
                 {CONFIG.rooms.map(room => {
                   if (!visibleRooms[room.id]) return null;
                   const isHovered = hoveredRoom === room.id;
                   const isOthersHovered = hoveredRoom !== null && hoveredRoom !== room.id;
                   
+                  const yAxisId = room.id.includes('fridge') ? 'right' : 'left';
+                  
                   return (
                     <Line 
+                      yAxisId={yAxisId}
                       key={`${room.id}_hum`}
                       type="monotone" 
                       dataKey={`${room.id}_hum`} 
                       name={`${room.icon} ${room.sheetName}`} 
                       stroke={room.color} 
-                      strokeWidth={isHovered ? 4 : 2} 
+                      strokeWidth={isHovered ? 2.5 : 1.5} 
                       strokeOpacity={isOthersHovered ? 0.15 : 1}
                       style={{
-                        filter: isHovered ? `drop-shadow(0px 0px 8px ${room.color})` : 'none',
+                        filter: isHovered ? `drop-shadow(0px 0px 4px ${room.color})` : 'none',
                         transition: 'all 0.3s ease'
                       }}
                       dot={false}
-                      activeDot={{ r: isHovered ? 8 : 5 }}
+                      activeDot={{ r: isHovered ? 6 : 4 }}
                       connectNulls
                       onMouseEnter={() => setHoveredRoom(room.id)}
                       onMouseLeave={() => setHoveredRoom(null)}
