@@ -34,6 +34,14 @@ export const CONFIG = {
       icon: "🧊",
       tempRange: [2, 8],
       humRange: [40, 80]
+    },
+    {
+      id: "tapo_h110_be12",
+      sheetName: "Tapo_H110_BE12",
+      color: "#fb923c", // Orange
+      icon: "🌡️",
+      tempRange: [20, 30],
+      humRange: [40, 70]
     }
   ],
   refreshIntervalMs: 60000, // อัปเดตทุกๆ 1 นาที
